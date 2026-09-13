@@ -26,7 +26,6 @@ import {
   AXIS_GROUPS,
   BUILDER_COPY,
   PUBLISH_API_URL,
-  RECOMMENDATION_LABELS,
   metricBarWidth,
   pct,
 } from "../../src/lib/plannerDemo";
@@ -66,12 +65,6 @@ const groupedAxes = (() => {
   const groupWeight = (group: { axes: { id: string }[] }) => group.axes.reduce((sum, axis) => sum + (axisMeanWeight.get(axis.id) ?? 0), 0) / Math.max(group.axes.length, 1);
   return groups.filter((group) => group.axes.length).sort((a, b) => groupWeight(b) - groupWeight(a));
 })();
-const shortlistById = new Map(modelShortlist.rankings.map((row) => [row.model_id, row]));
-const recommendationCards = Object.entries(modelShortlist.recommendations).map(([key, modelId]) => ({
-  key,
-  label: RECOMMENDATION_LABELS[key] ?? key,
-  row: shortlistById.get(modelId),
-}));
 
 // Model shortlist rendered transposed: metrics as row labels, models as columns.
 type ShortlistRow = (typeof modelShortlist.rankings)[number];
@@ -1102,7 +1095,8 @@ function BuilderPage() {
     () => [...weightedCoverage].sort((a, b) => b.value - a.value),
     [weightedCoverage],
   );
-  const bestModelRow = recommendationCards.find((card) => card.key === "best_overall")?.row ?? null;
+  // Use the same descending score ranking as the selected suite's table.
+  const bestModelRow = expectedScoreRows[0] ?? null;
   const strongAbilities = rankedAbilities.filter((item) => item.value >= 0.4).slice(0, 3);
   const strongShown = strongAbilities.length ? strongAbilities : rankedAbilities.slice(0, 2);
   const weakAbilities = rankedAbilities.filter((item) => item.value < 0.2 && !strongShown.includes(item)).slice(-2);
@@ -1508,7 +1502,7 @@ function BuilderPage() {
                 <p className="mt-2">
                   Use this suite to compare models on {strongShown.map((item) => item.axis.name).join(" and ").toLowerCase()}
                   {weakAbilities.length ? <>; it barely exercises {weakAbilities.map((item) => item.axis.name).join(" and ").toLowerCase()}, so do not draw conclusions there.</> : "."}
-                  {bestModelRow ? <> Best-fitting model on this suite: <span className="font-semibold">{bestModelRow.model_name}</span>.</> : null}
+                  {bestModelRow ? <> Best-fitting model on this suite: <span className="font-semibold">{bestModelRow.name}</span> (highest mean reference score).</> : null}
                 </p>
               </div>
               <div className="mt-5 space-y-6">
